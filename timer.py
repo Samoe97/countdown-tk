@@ -1,4 +1,3 @@
-import random
 from tkinter import *
 import pyglet
 import urllib.request
@@ -77,7 +76,7 @@ themes = [
     theme_see_Thru
 ]
 
-theme = theme_light
+theme = theme_dark
 
 # FONTS
 
@@ -128,23 +127,36 @@ def resize(event) :
     timerClock.config(font = ('Montserrat-Light', newFontSize))
     timerClockDecimal.config(font = ('Montserrat-Light', newFontSize))
 
-    minSize = windowWidth / 10
     timerFrame.grid_columnconfigure(0, weight = 1, minsize = windowWidth / 4)
     timerFrame.grid_columnconfigure(1, weight = 1, minsize = windowWidth / 4.75)
 
-    print(minSize)
+def flashWindow() :
+    previousTheme = theme
+    if theme != theme_light :
+        themeFlash = theme_light
+    else :
+        themeFlash = theme_dark
 
-def switchTheme() :
+    switchTheme(themeToSwitchTo = themeFlash)
+    root.after(100, switchTheme(themeToSwitchTo = previousTheme))
+    root.after(100, switchTheme(themeToSwitchTo = themeFlash))
+    root.after(100, switchTheme(themeToSwitchTo = previousTheme))
+    root.after(100, switchTheme(themeToSwitchTo = themeFlash))
+    root.after(100, switchTheme(themeToSwitchTo = previousTheme))
+
+def switchTheme(themeToSwitchTo = None) :
 
     global theme
-
-    themeIndex = themes.index(theme)
     previousTheme = theme
 
-    try : 
-        theme = themes[themeIndex + 1]
-    except :
-        theme = themes[0]
+    if themeToSwitchTo != None :
+        theme = themeToSwitchTo
+    else :
+        themeIndex = themes.index(theme)
+        try : 
+            theme = themes[themeIndex + 1]
+        except :
+            theme = themes[0]
 
     if theme is theme_see_Thru :
         root.wm_attributes("-transparentcolor", "#222222")
@@ -164,8 +176,10 @@ def switchTheme() :
                 if i.colors == previousTheme['buttonColors'] :
                     i.colors = theme['buttonColors']
                     i.config(bg = theme['buttonColors'][0])
+                    i.config(fg = theme['textColor'])
                 else :
                     i.config(bg = i.colors[0])
+                    i.config(fg = 'white')
         except :
             pass
 
@@ -275,6 +289,7 @@ def updateTimer() :
             root.after(10, updateTimer) # LOOP BACK TO THE TOP
 
         else :
+            flashWindow()
             resetTimer() # RESET WHEN FINISHED
 
 def resetTimer() :
@@ -402,7 +417,7 @@ updatableGuiElements.append(themeButton)
 ##########
 
 timerFrame = Frame(rootFrame, bg = theme['mainBg'])
-timerFrame.grid(column = 0, row = 1, sticky = 'NEWS')
+timerFrame.grid(column = 0, row = 1, sticky = 'NEWS', pady = 32)
 
 timerFrame.grid_columnconfigure(0, weight = 1, minsize = 300)
 timerFrame.grid_columnconfigure(1, weight = 1, minsize = 200)
@@ -437,15 +452,15 @@ controlsFrame.grid_rowconfigure(1, weight = 1, minsize = 40)
 
 resetButton = HoverButton(controlsFrame, text = 'RESET', colors = theme['buttonColors'], command = resetTimer)
 resetButton.config(width = 8, height = 2, fg = theme['textColor'], font = ('Montserrat-Medium', 16))
-resetButton.grid(column = 0, row = 0, padx = 24, pady = 16, sticky = 'NES')
+resetButton.grid(column = 0, row = 0, padx = 24, ipady = 16, pady = 16, sticky = 'NES')
 
 playPauseButton = HoverButton(controlsFrame, text = 'START', colors = theme['buttonColors'], command = playPause)
 playPauseButton.config(width = 12, height = 2, fg = theme['textColor'], font = ('Montserrat-Medium', 16))
-playPauseButton.grid(column = 1, row = 0, padx = 24, pady = 16, sticky = 'NEWS')
+playPauseButton.grid(column = 1, row = 0, padx = 24, ipady = 16, pady = 16, sticky = 'NEWS')
 
 clearButton = HoverButton(controlsFrame, text = 'CLEAR', colors = ['#cc0000', '#ee0000', '#aa0000'], command = clearTimer)
 clearButton.config(width = 8, height = 2, fg = 'white', font = ('Montserrat-Medium', 16))
-clearButton.grid(column = 2, row = 0, padx = 24, pady = 16, sticky = 'NWS')
+clearButton.grid(column = 2, row = 0, padx = 24, ipady = 16, pady = 16, sticky = 'NWS')
 
 timerEntry = Entry(controlsFrame, bg = theme['mainBg'], fg = theme['textColor'], font = ('Montserrat-Medium', 16), width = 8, justify = 'c')
 timerEntry.grid(column = 1, row = 1, ipady = 2)
