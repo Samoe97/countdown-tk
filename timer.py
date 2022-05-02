@@ -77,7 +77,7 @@ themes = [
     theme_see_Thru
 ]
 
-theme = theme_dark
+theme = theme_light
 
 # FONTS
 
@@ -121,19 +121,31 @@ def center(window, size, yoffset = 0) :
     y = (screen_height / 2) - size[1] / 2 - yoffset
     window.geometry('+' + str(int(x)) + '+' + str(int(y)))
 
+def resize(event) :
+    windowWidth = root.winfo_width()
+    newFontSize = int(windowWidth / 10)
+
+    timerClock.config(font = ('Montserrat-Light', newFontSize))
+    timerClockDecimal.config(font = ('Montserrat-Light', newFontSize))
+
+    minSize = windowWidth / 10
+    timerFrame.grid_columnconfigure(0, weight = 1, minsize = windowWidth / 4)
+    timerFrame.grid_columnconfigure(1, weight = 1, minsize = windowWidth / 4.75)
+
+    print(minSize)
+
 def switchTheme() :
 
     global theme
 
-    def randomizeTheme() :
-        global theme
-        randTheme = themes[random.randint(0, len(themes) - 1)]
-        if randTheme != theme :
-            theme = randTheme
-        else :
-            randomizeTheme()
-    
-    randomizeTheme()
+    themeIndex = themes.index(theme)
+    previousTheme = theme
+
+    try : 
+        theme = themes[themeIndex + 1]
+    except :
+        theme = themes[0]
+
     if theme is theme_see_Thru :
         root.wm_attributes("-transparentcolor", "#222222")
     else :
@@ -149,8 +161,11 @@ def switchTheme() :
 
         try :
             if i.colors : # IF I HAS 'COLORS', IT'S PROB A HOVERBUTTON
-                i.colors = theme['buttonColors']
-                i.config(bg = theme['buttonColors'][0])
+                if i.colors == previousTheme['buttonColors'] :
+                    i.colors = theme['buttonColors']
+                    i.config(bg = theme['buttonColors'][0])
+                else :
+                    i.config(bg = i.colors[0])
         except :
             pass
 
@@ -329,6 +344,8 @@ root.minsize(840, 400)
 
 root.config(bg = theme['mainBg'])
 
+root.bind('<Configure>', resize)
+
 root.grid_rowconfigure(0, weight = 1)
 root.grid_columnconfigure(0, weight = 1)
 
@@ -387,8 +404,8 @@ updatableGuiElements.append(themeButton)
 timerFrame = Frame(rootFrame, bg = theme['mainBg'])
 timerFrame.grid(column = 0, row = 1, sticky = 'NEWS')
 
-timerFrame.grid_columnconfigure(0, weight = 1, minsize = 230)
-timerFrame.grid_columnconfigure(1, weight = 1, minsize = 120)
+timerFrame.grid_columnconfigure(0, weight = 1, minsize = 300)
+timerFrame.grid_columnconfigure(1, weight = 1, minsize = 200)
 timerFrame.grid_rowconfigure(0, weight = 1)
 
 timerClockVar = StringVar()
