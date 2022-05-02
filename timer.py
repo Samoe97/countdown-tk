@@ -1,29 +1,32 @@
-from email import header
+import random
 from tkinter import *
-from PIL import Image, ImageTk
-import os
 import pyglet
 import urllib.request
 import io
 from datetime import datetime, timedelta
 
+playing = False
+paused = False
+
 ##### STYLES #####
 
-updatableGuiElements = []
+updatableGuiElements = [] # ADD ANY WIDGETS TO BE MODIFIED BY THE THEME TO THIS LIST
 
 # COLORS
 
 theme_light = {
-    'textColor' : '#333333',
-    'mainBg' : '#E6E6E6',
+    'name' : 'light', # THEME NAME
+    'textColor' : '#333333', # TEXT COLOR
+    'mainBg' : '#E6E6E6', # BACKGROUND
     'buttonColors' : [
-        '#CCCCCC', 
-        '#DDDDDD', 
-        '#BBBBBB'
+        '#CCCCCC', # IDLE
+        '#DDDDDD', # HOVERED
+        '#BBBBBB'  # CLICKED
     ]
 }
 
 theme_dark = {
+    'name' : 'dark',
     'textColor' : '#EEEEEE',
     'mainBg' : '#222222',
     'buttonColors' : [
@@ -33,19 +36,70 @@ theme_dark = {
     ]
 }
 
+theme_blue_dark = {
+    'name' : 'blue_dark',
+    'textColor' : '#FFFFFF',
+    'mainBg' : '#3D4855',
+    'buttonColors' : [
+        '#E79F6D',
+        '#EFAA7F',
+        '#BF845B'
+    ]
+}
+
+theme_blue_light = {
+    'name' : 'blue_light',
+    'textColor' : '#3D4855',
+    'mainBg' : '#FFFFFF',
+    'buttonColors' : [
+        '#E79F6D',
+        '#EFAA7F',
+        '#BF845B'
+    ]
+}
+
+theme_see_Thru = {
+    'name' : 'see_Thru',
+    'textColor' : '#EEEEEE',
+    'mainBg' : '#222222',
+    'buttonColors' : [
+        '#555555', 
+        '#666666', 
+        '#444444'
+    ]
+}
+
+themes = [
+    theme_light,
+    theme_dark,
+    theme_blue_dark,
+    theme_blue_light,
+    theme_see_Thru
+]
+
 theme = theme_dark
 
 # FONTS
 
-fontURL_MontserratMedium = 'https://samoe.me/font/montserrat/Montserrat-Medium.ttf'
-montserratMediumRaw = urllib.request.urlopen(fontURL_MontserratMedium).read()
-montserratMediumFile = io.BytesIO(montserratMediumRaw)
-pyglet.font.add_file(montserratMediumFile)
+print('Initializing font: Montserrat-Medium')
+try :
+    fontURL_MontserratMedium = 'https://samoe.me/font/montserrat/Montserrat-Medium.ttf'
+    montserratMediumRaw = urllib.request.urlopen(fontURL_MontserratMedium).read() # OPEN THE URL AND READ ITS CONTENTS
+    montserratMediumFile = io.BytesIO(montserratMediumRaw) # TURN THE DATA INTO A USABLE FILE REFERENCE
+    pyglet.font.add_file(montserratMediumFile) # ADD A NON-SYSTEM-INSTALLED FONT TO TKINTER
+    print('Success.')
+except :
+    print('Failure. Using default font instead.')
 
-fontURL_MontserratLight = 'https://samoe.me/font/montserrat/Montserrat-Light.ttf'
-montserratLightRaw = urllib.request.urlopen(fontURL_MontserratLight).read()
-montserratLightFile = io.BytesIO(montserratLightRaw)
-pyglet.font.add_file(montserratLightFile)
+print('Initializing font: Montserrat-Light')
+try :
+    fontURL_MontserratLight = 'https://samoe.me/font/montserrat/Montserrat-Light.ttf'
+    montserratLightRaw = urllib.request.urlopen(fontURL_MontserratLight).read()
+    montserratLightFile = io.BytesIO(montserratLightRaw)
+    pyglet.font.add_file(montserratLightFile)
+    print('Success.')
+except :
+    print('Failure. Using default font instead.')
 
 ##################
 
@@ -61,18 +115,6 @@ def updateTimeVar() :
     timeVar.set(currentTime)
     root.after(5000, updateTimeVar)
 
-def updateLastClick(event) :
-
-    global lastClickX
-    global lastClickY
-    lastClickX = event.x
-    lastClickY = event.y
-
-def drag(event) :
-
-    x, y = event.x - lastClickX + root.winfo_x(), event.y - lastClickY + root.winfo_y()
-    root.geometry('+' + str(int(x)) + '+' + str(int(y)))
-
 def center(window, size, yoffset = 0) :
 
     x = (screen_width / 2) - size[0] / 2
@@ -82,21 +124,31 @@ def center(window, size, yoffset = 0) :
 def switchTheme() :
 
     global theme
-    if theme == theme_dark :
-        theme = theme_light
+
+    def randomizeTheme() :
+        global theme
+        randTheme = themes[random.randint(0, len(themes) - 1)]
+        if randTheme != theme :
+            theme = randTheme
+        else :
+            randomizeTheme()
+    
+    randomizeTheme()
+    if theme is theme_see_Thru :
+        root.wm_attributes("-transparentcolor", "#222222")
     else :
-        theme = theme_dark
+        root.wm_attributes("-transparentcolor", "#00FF00")
 
     for i in updatableGuiElements :
         i.config(bg = theme['mainBg'])
 
-        try :
+        try : # USE A TRY/EXCEPT BECAUSE NOT ALL WIDGETS HAVE FG OPTION
             i.config(fg = theme['textColor'])
         except :
             pass
 
         try :
-            if i.colors :
+            if i.colors : # IF I HAS 'COLORS', IT'S PROB A HOVERBUTTON
                 i.colors = theme['buttonColors']
                 i.config(bg = theme['buttonColors'][0])
         except :
@@ -104,17 +156,62 @@ def switchTheme() :
 
     root.update()
 
-def startTimer() :
+def playPause() :
+
+    def pause() :
+
+        global pauseTime
+        global paused
+        global playing
+
+        currentTime = datetime.now()
+
+        currentValue = timerTarget - currentTime
+        pauseTime = str(currentValue)
+
+        paused = True
+        playing = False
+        playPauseButton.config(text = 'RESUME')
+
+    def play() :
+
+        global paused
+        if paused == True :
+            paused = False
+            startTimer(pauseTime)
+        else :
+            startTimer()
+
+        playPauseButton.config(text = 'PAUSE')
+        global playing
+        playing = True
+
+    if playing == True :
+
+        pause()
+
+    else :
+
+        play()
+
+def startTimer(customTime = None) :
 
     currentTime = datetime.now()
 
-    timerValue = timerEntry.get()
+    if customTime == None :
+        timerValue = timerEntry.get()
+    else :
+        timerValue = customTime.split('.')[0]
+
     timerValue = timerValue.split(':')
 
     global timerTarget
 
+    if len(timerValue) > 3 :
+        pass
+
     if len(timerValue) == 1 :
-        timerTarget = currentTime + timedelta(seconds = int(timerValue))
+        timerTarget = currentTime + timedelta(seconds = int(timerValue[0]))
     if len(timerValue) == 2 :
         timerTarget = currentTime + timedelta(minutes = int(timerValue[0]), seconds = int(timerValue[1]))
     if len(timerValue) == 3 :
@@ -124,44 +221,67 @@ def startTimer() :
 
 def updateTimer() :
 
-    currentTime = datetime.now()
+    if paused == False : # IF PAUSED IS SET TO TRUE, BREAK THE LOOP
 
-    currentValue = timerTarget - currentTime
+        currentTime = datetime.now()
+        currentValue = timerTarget - currentTime
+        currentValue = str(currentValue)
 
-    currentValue = str(currentValue)
+        if not currentValue.__contains__('-1') :
 
-    if not currentValue.__contains__('-1') :
-
-        postDecimalCheck = currentValue.split('.')
-        if len(postDecimalCheck) == 2 :
-            postDecimalCheck[1] = postDecimalCheck[1][0:2]
-            currentDecValue = '.' + postDecimalCheck[1]
-        else :
-            currentDecValue = '.00'
-
-        doubleDigHourCheck = postDecimalCheck[0].split(':')
-        if len(doubleDigHourCheck) == 3 :
-            if int(doubleDigHourCheck[0]) < 10 :
-                doubleDigHourCheck[0] = '0' + doubleDigHourCheck[0]
-        currentValue = ''
-
-        lenCheck = len(doubleDigHourCheck)
-        index = 0
-        for i in doubleDigHourCheck :
-            index += 1
-            if index != lenCheck :
-                currentValue = currentValue + i + ':'
+            # THIS IS ALL JUST TEXT FORMATTING STUFF
+            postDecimalCheck = currentValue.split('.')
+            if len(postDecimalCheck) == 2 :
+                postDecimalCheck[1] = postDecimalCheck[1][0:2]
+                currentDecValue = '.' + postDecimalCheck[1]
             else :
-                currentValue = currentValue + i
+                currentDecValue = '.00'
 
-        timerClockVar.set(currentValue)
-        timerClockDecimalVar.set(currentDecValue)
+            doubleDigHourCheck = postDecimalCheck[0].split(':') 
+            if len(doubleDigHourCheck) == 3 :
+                if int(doubleDigHourCheck[0]) < 10 :
+                    doubleDigHourCheck[0] = '0' + doubleDigHourCheck[0]
 
-        root.after(10, updateTimer)
+            # NOW ADD THE STRING BACK TOGETHER
 
-    else :
-        timerClockVar.set('00:00:00')
-        timerClockDecimalVar.set('.00')
+            currentValue = ''
+            index = 1
+            for i in doubleDigHourCheck :
+                # PUT A COLON AFTER EACH PLACE OF THE TIME STRING, EXCEPT THE LAST
+                if index == len(doubleDigHourCheck) :
+                    currentValue = currentValue + i
+                else :
+                    index += 1
+                    currentValue = currentValue + i + ':'
+
+            timerClockVar.set(currentValue)
+            timerClockDecimalVar.set(currentDecValue)
+
+            root.after(10, updateTimer) # LOOP BACK TO THE TOP
+
+        else :
+            resetTimer() # RESET WHEN FINISHED
+
+def resetTimer() :
+
+    def setPausedFalse() :
+        global paused
+        paused = False
+
+    global paused
+    global playing
+    paused = True
+    playing = False
+    timerClockVar.set('00:00:00')
+    timerClockDecimalVar.set('.00')
+
+    playPauseButton.config(text = 'START')
+
+    root.after(20, setPausedFalse)
+
+def clearTimer() :
+    resetTimer()
+    timerEntry.delete(0, 'end')
 
 ##################
 
@@ -214,21 +334,6 @@ root.grid_columnconfigure(0, weight = 1)
 
 updatableGuiElements.append(root)
 
-# root.resizable(width=False, height=False)
-# root.attributes('-transparentcolor','#003200')
-
-# root.overrideredirect(True)
-# root.after(10, lambda: set_appwindow(mainWindow))
-
-# bgImagePath = os.path.dirname(__file__) + '/timer-bg.png'
-# bgImageRef = Image.open(bgImagePath)
-# bgImageTk = ImageTk.PhotoImage(bgImageRef)
-
-# bgImage = Label(root, image = bgImageTk)
-# bgImage.place(x = 0, y = 0)
-# bgImage.bind('<Button-1>', updateLastClick)
-# bgImage.bind('<B1-Motion>', drag)
-
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
 
@@ -244,7 +349,7 @@ rootFrame.grid(column = 0, row = 0, sticky = 'NEWS', padx = 32, pady = 32)
 
 rootFrame.grid_rowconfigure(0, weight = 1, minsize = 24)
 rootFrame.grid_rowconfigure(1, weight = 500, minsize = 200)
-rootFrame.grid_rowconfigure(2, weight = 1, minsize = 64)
+rootFrame.grid_rowconfigure(2, weight = 1, minsize = 24)
 rootFrame.grid_columnconfigure(0, weight = 1)
 
 updatableGuiElements.append(rootFrame)
@@ -282,8 +387,9 @@ updatableGuiElements.append(themeButton)
 timerFrame = Frame(rootFrame, bg = theme['mainBg'])
 timerFrame.grid(column = 0, row = 1, sticky = 'NEWS')
 
-timerFrame.grid_columnconfigure(0, weight = 1000)
-timerFrame.grid_columnconfigure(1, weight = 1, minsize = 230)
+timerFrame.grid_columnconfigure(0, weight = 1, minsize = 230)
+timerFrame.grid_columnconfigure(1, weight = 1, minsize = 120)
+timerFrame.grid_rowconfigure(0, weight = 1)
 
 timerClockVar = StringVar()
 timerClockVar.set('00:00:00')
@@ -291,11 +397,11 @@ timerClockVar.set('00:00:00')
 timerClockDecimalVar = StringVar()
 timerClockDecimalVar.set('.00')
 
-timerClock = Label(timerFrame, fg = theme['textColor'], bg = theme['mainBg'], justify = 'right', font = ('Montserrat-Light', 84), textvariable = timerClockVar)
-timerClock.grid(column = 0, row = 0, sticky = 'NSE')
+timerClock = Label(timerFrame, fg = theme['textColor'], bg = theme['mainBg'], font = ('Montserrat-Light', 96), textvariable = timerClockVar)
+timerClock.grid(column = 0, row = 0, sticky = 'NES')
 
-timerClockDecimal = Label(timerFrame, fg = theme['textColor'], bg = theme['mainBg'], justify = 'left', font = ('Montserrat-Light', 84), textvariable = timerClockDecimalVar)
-timerClockDecimal.grid(column = 1, row = 0, sticky = 'NSW')
+timerClockDecimal = Label(timerFrame, fg = theme['textColor'], bg = theme['mainBg'], font = ('Montserrat-Light', 96), textvariable = timerClockDecimalVar)
+timerClockDecimal.grid(column = 1, row = 0, sticky = 'NWS')
 
 updatableGuiElements.append(timerClock)
 updatableGuiElements.append(timerClockDecimal)
@@ -312,16 +418,16 @@ controlsFrame.grid_columnconfigure(2, weight = 1)
 controlsFrame.grid_rowconfigure(0, weight = 1, minsize = 40)
 controlsFrame.grid_rowconfigure(1, weight = 1, minsize = 40)
 
-resetButton = HoverButton(controlsFrame, text = 'RESET', colors = theme['buttonColors'])
-resetButton.config(width = 8, height = 4, fg = theme['textColor'], font = ('Montserrat-Medium', 16))
+resetButton = HoverButton(controlsFrame, text = 'RESET', colors = theme['buttonColors'], command = resetTimer)
+resetButton.config(width = 8, height = 2, fg = theme['textColor'], font = ('Montserrat-Medium', 16))
 resetButton.grid(column = 0, row = 0, padx = 24, pady = 16, sticky = 'NES')
 
-playPauseButton = HoverButton(controlsFrame, text = 'START', colors = theme['buttonColors'], command = startTimer)
-playPauseButton.config(width = 8, height = 4, fg = theme['textColor'], font = ('Montserrat-Medium', 16))
+playPauseButton = HoverButton(controlsFrame, text = 'START', colors = theme['buttonColors'], command = playPause)
+playPauseButton.config(width = 12, height = 2, fg = theme['textColor'], font = ('Montserrat-Medium', 16))
 playPauseButton.grid(column = 1, row = 0, padx = 24, pady = 16, sticky = 'NEWS')
 
-clearButton = HoverButton(controlsFrame, text = 'CLEAR', colors = ['#cc0000', '#ee0000', '#aa0000'])
-clearButton.config(width = 8, height = 4, fg = 'white', font = ('Montserrat-Medium', 16))
+clearButton = HoverButton(controlsFrame, text = 'CLEAR', colors = ['#cc0000', '#ee0000', '#aa0000'], command = clearTimer)
+clearButton.config(width = 8, height = 2, fg = 'white', font = ('Montserrat-Medium', 16))
 clearButton.grid(column = 2, row = 0, padx = 24, pady = 16, sticky = 'NWS')
 
 timerEntry = Entry(controlsFrame, bg = theme['mainBg'], fg = theme['textColor'], font = ('Montserrat-Medium', 16), width = 8, justify = 'c')
